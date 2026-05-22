@@ -46,13 +46,34 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none}
 
 /* ===== LOADING OVERLAY ===== */
 #overlay{
-  position:fixed;inset:0;z-index:10;
+  position:fixed;
+  inset:0;
+  z-index:10;
   background:#000;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:28px;
-  transition:opacity .8s ease;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:28px;
+
+  opacity:1;
+  transform:scale(1);
+  filter:blur(0);
+
+  transition:
+    opacity 1.6s ease,
+    transform 1.8s cubic-bezier(.2,.8,.2,1),
+    filter 1.8s ease;
 }
-#overlay.hidden{opacity:0;pointer-events:none}
+
+#overlay.hidden{
+  opacity:0;
+  transform:scale(1.08);
+  filter:blur(12px);
+
+  pointer-events:none;
+}
 
 #countdown{
   display:flex;gap:16px;align-items:flex-end;
@@ -90,7 +111,78 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none}
 }
 
 /* loading dots khi chưa đủ ảnh */
-#loading-dots{font-size:14px;color:rgba(140,200,255,.5);letter-spacing:.2em}
+#loading-dots{
+  font-size:14px;
+  color:rgba(140,200,255,.75);
+  letter-spacing:.12em;
+
+  text-shadow:
+    0 0 6px rgba(120,200,255,.5),
+    0 0 16px rgba(120,200,255,.35);
+
+  animation:pulseText 2s ease-in-out infinite;
+}
+#loading-wrap{
+  width:min(260px,70vw);
+  height:6px;
+
+  border-radius:999px;
+  overflow:hidden;
+
+  background:rgba(255,255,255,.08);
+
+  box-shadow:
+    inset 0 0 10px rgba(255,255,255,.05),
+    0 0 18px rgba(120,200,255,.08);
+}
+
+#loading-bar{
+  width:0%;
+  height:100%;
+
+  border-radius:999px;
+
+  background:linear-gradient(
+    90deg,
+    rgba(120,200,255,.5),
+    rgba(180,240,255,.95)
+  );
+
+  box-shadow:
+    0 0 12px rgba(120,200,255,.8),
+    0 0 26px rgba(120,200,255,.35);
+
+  transition:width .35s ease;
+}
+
+#loading-text{
+  font-size:13px;
+  color:rgba(180,220,255,.6);
+
+  letter-spacing:.08em;
+
+  text-shadow:0 0 12px rgba(120,200,255,.18);
+}
+
+/* breathing glow */
+@keyframes pulseText{
+  0%,100%{
+    opacity:.45;
+    transform:scale(1);
+    text-shadow:
+      0 0 4px rgba(120,200,255,.25),
+      0 0 10px rgba(120,200,255,.15);
+  }
+
+  50%{
+    opacity:1;
+    transform:scale(1.06);
+    text-shadow:
+      0 0 10px rgba(140,220,255,.9),
+      0 0 26px rgba(100,190,255,.55),
+      0 0 48px rgba(80,160,255,.25);
+  }
+}
 </style>
 </head>
 <body>
@@ -112,9 +204,17 @@ canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none}
     <div class="cd-box"><div class="cd-num" id="cd-s">00</div><div class="cd-label">giây</div></div>
   </div>
   <div id="cd-done">🎉 Hôm nay là ngày thi!<br>Cố gắng lên nhé 🍀</div>
-  <div id="loading-dots">· · ·</div>
+  <div id="loading-wrap">
+  <div id="loading-bar"></div>
 </div>
 
+<div id="loading-text">đang tải kỷ niệm... ✨</div>
+
+<div id="loading-dots" style="display:none">
+  ấn để bắt đầu ✨
+</div>
+
+</div>
 <script>
 const isMobile=/Mobi|Android/i.test(navigator.userAgent)||window.innerWidth<768;
 
@@ -243,29 +343,71 @@ const stage=document.getElementById('stage');
 let ii=0,spawnSlot=0;
 
 /* preload toàn bộ ảnh, track xem đã load đủ chưa */
+const loadingBar=document.getElementById('loading-bar');
+const loadingText=document.getElementById('loading-text');
+const loadingDots=document.getElementById('loading-dots');
+
 let imgsLoaded=0;
+let ready=false;
+
 const preloaded=IMGS.map(src=>{
+
   const img=new Image();
+
   img.onload=img.onerror=()=>{
+
     imgsLoaded++;
-    /* khi đủ ảnh → ẩn overlay, bật cluster */
-    if(imgsLoaded>=IMGS.length) startScene();
+
+    const percent=Math.floor((imgsLoaded/IMGS.length)*100);
+
+    loadingBar.style.width=percent+'%';
+
+    loadingText.textContent=`đang tải ${percent}% ✨`;
+
+    if(imgsLoaded>=IMGS.length){
+
+      ready=true;
+
+      setTimeout(()=>{
+
+        loadingText.textContent='xong rồi nè 🌌';
+
+        setTimeout(()=>{
+
+          document.getElementById('loading-wrap').style.display='none';
+          loadingText.style.display='none';
+
+          loadingDots.style.display='block';
+
+        },700);
+
+      },300);
+    }
   };
+
   img.src=src;
   return img;
 });
 
-/* fallback: sau 3s dù ảnh chưa load hết cũng bắt đầu */
-const fallbackTimer=setTimeout(startScene,3000);
 let sceneStarted=false;
+const overlay=document.getElementById('overlay');
 
+overlay.addEventListener('click',()=>{
+
+  if(!ready || sceneStarted)return;
+
+  tryPlay();
+
+  loadingDots.textContent='đang mở cánh cổng sao trời ✨';
+
+  setTimeout(()=>{
+    startScene();
+  },2000);
+
+},{once:true});
 function startScene(){
   if(sceneStarted)return;
   sceneStarted=true;
-  clearTimeout(fallbackTimer);
-
-  /* delay 3 giây trước khi vào scene */
-  setTimeout(()=>{
 
     /* ẩn overlay */
     const ov=document.getElementById('overlay');
@@ -285,7 +427,7 @@ function startScene(){
       setTimeout(tick,si[0]+Math.random()*(si[1]-si[0]));
     })();
 
-  },3000);
+  
 }
 
 function spawnWithDelay(negDelay){
