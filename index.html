@@ -264,16 +264,28 @@ function startScene(){
   sceneStarted=true;
   clearTimeout(fallbackTimer);
 
-  /* ẩn overlay */
-  const ov=document.getElementById('overlay');
-  ov.classList.add('hidden');
-  setTimeout(()=>ov.remove(),1000);
+  /* delay 3 giây trước khi vào scene */
+  setTimeout(()=>{
 
-  /* spawn cluster với delay âm để có sẵn trên màn hình ngay */
-  const initCount=isMobile?10:14;
-  const si=isMobile?[600,900]:[400,700];
-  for(let i=0;i<initCount;i++) spawnWithDelay(-(initCount-i)*800);
-  (function tick(){spawn();setTimeout(tick,si[0]+Math.random()*(si[1]-si[0]));})();
+    /* ẩn overlay */
+    const ov=document.getElementById('overlay');
+    ov.classList.add('hidden');
+    setTimeout(()=>ov.remove(),1000);
+
+    /* spawn cluster */
+    const initCount=isMobile?10:14;
+    const si=isMobile?[600,900]:[400,700];
+
+    for(let i=0;i<initCount;i++){
+      spawnWithDelay(-(initCount-i)*800);
+    }
+
+    (function tick(){
+      spawn();
+      setTimeout(tick,si[0]+Math.random()*(si[1]-si[0]));
+    })();
+
+  },3000);
 }
 
 function spawnWithDelay(negDelay){
